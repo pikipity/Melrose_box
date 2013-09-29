@@ -1,7 +1,7 @@
-尔罗斯方块（Arduino）
+俄罗斯方块（Arduino）
 ===========
 
-使用 Arduino 制作的尔罗斯方块游戏，使用四个按钮来控制，LCD12864（QC12864B） 作为显示屏来显示，用 Arduino 的 u8glib 库来对 LCD 进行控制。
+使用 Arduino 制作的俄罗斯方块游戏，使用四个按钮来控制，LCD12864（QC12864B） 作为显示屏来显示，用 Arduino 的 u8glib 库来对 LCD 进行控制。
 
 [u8glib 库可以在这里下载](https://code.google.com/p/u8glib/)。
 
