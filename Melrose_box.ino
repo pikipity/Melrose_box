@@ -12,7 +12,7 @@ U8GLIB_ST7920_128X64_4X u8g(8, 9, 10, 12, 4, 5, 6, 7, 1, 2, 3);
 //constant
 int button=0;//no: 0; left: 1; right: 2; up: 3; down: t decrease
 unsigned long score=0;//total score
-int t=500;//one frame time  ( delay time )
+int t=33;//one frame time  ( delay time )
 //array to control game
 unsigned int gameArray[20][10];
 unsigned int oldObject[4][2]={{30,30},{30,30},{30,30},{30,30}};
@@ -23,9 +23,10 @@ unsigned int objNum;
 boolean Finish=false;
 unsigned finishFrame=0;
 boolean Skip=false;
-unsigned int lowy=0;
-unsigned int leftx=10;
-unsigned int rightx=0;
+unsigned int displayState=0;
+unsigned int displayLine[20];
+boolean needRemove=false;
+unsigned int FrameNum=0;
 
 //prepare for the font
 void u8g_prepare(void) {
@@ -88,11 +89,8 @@ void draw(){
   gameDisplay();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////
-void Calarray(){
-  //if Nextnew is true, generate a new object
-  if(Nextnew){
-    objNum=random(4);
+void CreatNewObject(){
+  objNum=random(4);
     switch(objNum){
       case 0:
       //1111
@@ -143,30 +141,260 @@ void Calarray(){
         Finish=true;break;
       }
     }
-  }else{
-    //normal situation
+}
+
+void ButtonResponse(){
+  //button response
     switch(button){
       case 1:
       //left
-      leftx=10;
       //copy newObject to oldObject
       for(int i=0;i<4;i++){
         for(int j=0;j<2;j++){
           oldObject[i][j]=newObject[i][j];
         }
       }
+      //newObkject go left
+      for(int i=0;i<4;i++){
+        if(newObject[i][1]==0){Skip=true;break;}else{newObject[i][1]-=1;}
+      }
+      //some obejct may stop moving left
+      for(int i=0;i<4;i++){
+          if(gameArray[newObject[i][0]][newObject[i][1]]==1){
+            boolean IsStopByself;
+            for(int j=0;j<4;j++){
+              if(newObject[i][0]==oldObject[j][0] && newObject[i][1]==oldObject[j][1]){
+                IsStopByself=true;
+                break;
+              }else{
+                IsStopByself=false;
+              }
+            }
+            if(!IsStopByself){
+              Skip=true;
+              break;
+            }
+          }
+      }
       break;
       case 2:
       //right
-      score=20;
+      //copy newObject to oldObject
+      for(int i=0;i<4;i++){
+        for(int j=0;j<2;j++){
+          oldObject[i][j]=newObject[i][j];
+        }
+      }
+      //newObkject go right
+      for(int i=0;i<4;i++){
+        if(newObject[i][1]==9){Skip=true;break;}else{newObject[i][1]+=1;}
+      }
+      //some obejct may stop moving left
+      for(int i=0;i<4;i++){
+          if(gameArray[newObject[i][0]][newObject[i][1]]==1){
+            boolean IsStopByself;
+            for(int j=0;j<4;j++){
+              if(newObject[i][0]==oldObject[j][0] && newObject[i][1]==oldObject[j][1]){
+                IsStopByself=true;
+                break;
+              }else{
+                IsStopByself=false;
+              }
+            }
+            if(!IsStopByself){
+              Skip=true;
+              break;
+            }
+          }
+      }
       break;
       case 3:
       //up
-      score=30;
+      //copy newObject to oldObject
+      for(int i=0;i<4;i++){
+        for(int j=0;j<2;j++){
+          oldObject[i][j]=newObject[i][j];
+        }
+      }
+      //change
+      switch(objNum){
+        case 0:
+        //1111
+            if(newObject[0][0]==newObject[1][0] && newObject[0][1]==newObject[1][1]-1){
+              if(newObject[0][0]>=2 && newObject[3][0]<=18){
+                newObject[0][0]-=2;
+                newObject[0][1]+=2;
+                newObject[1][0]-=1;
+                newObject[1][1]+=1;
+                newObject[3][0]+=1;
+                newObject[3][1]-=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }else if(newObject[0][0]==newObject[1][0] && newObject[0][1]==newObject[1][1]+1){
+              if(newObject[0][0]<=17 && newObject[3][0]>=1){
+                newObject[0][0]+=2;
+                newObject[0][1]-=2;
+                newObject[1][0]+=1;
+                newObject[1][1]-=1;
+                newObject[3][0]-=1;
+                newObject[3][1]+=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }else if(newObject[0][0]==newObject[1][0]-1 && newObject[0][1]==newObject[1][1]){
+              if(newObject[0][1]<=7 && newObject[3][1]>=1){
+                newObject[0][0]+=2;
+                newObject[0][1]+=2;
+                newObject[1][0]+=1;
+                newObject[1][1]+=1;
+                newObject[3][0]-=1;
+                newObject[3][1]-=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }else if(newObject[0][0]==newObject[1][0]+1 && newObject[0][1]==newObject[1][1]){
+              if(newObject[0][1]>=2 && newObject[3][1]<=8){
+                newObject[0][0]-=2;
+                newObject[0][1]-=2;
+                newObject[1][0]-=1;
+                newObject[1][1]-=1;
+                newObject[3][0]+=1;
+                newObject[3][1]+=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }
+        break;
+        case 2:
+        //111
+        //1
+            if(newObject[0][0]==newObject[1][0] && newObject[0][1]==newObject[1][1]-1){
+              if(newObject[0][0]>=1 && newObject[2][0]<=19){
+                newObject[0][0]-=1;
+                newObject[0][1]+=1;
+                newObject[3][0]-=2;
+                newObject[2][0]+=1;
+                newObject[2][1]-=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }else if(newObject[0][0]==newObject[1][0] && newObject[0][1]==newObject[1][1]+1){
+              if(newObject[0][0]<=18 && newObject[2][0]>=1){
+                newObject[0][0]+=1;
+                newObject[0][1]-=1;
+                newObject[3][0]+=2;
+                newObject[2][0]-=1;
+                newObject[2][1]+=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }else if(newObject[0][0]==newObject[1][0]-1 && newObject[0][1]==newObject[1][1]){
+              if(newObject[0][1]<=8 && newObject[2][1]>=1){
+                newObject[0][0]+=1;
+                newObject[0][1]+=1;
+                newObject[3][1]+=2;
+                newObject[2][0]-=1;
+                newObject[2][1]-=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }else if(newObject[0][0]==newObject[1][0]+1 && newObject[0][1]==newObject[1][1]){
+              if(newObject[0][1]>=1 && newObject[2][1]<=8){
+                newObject[0][0]-=1;
+                newObject[0][1]-=1;
+                newObject[3][1]-=2;
+                newObject[2][0]+=1;
+                newObject[2][1]+=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }        
+        break;
+        case 3:
+        //111
+        // 1
+            if(newObject[1][0]==newObject[3][0]-1 && newObject[1][1]==newObject[3][1]){
+              if(newObject[0][0]>=1){
+                newObject[0][0]-=1;
+                newObject[0][1]+=1;
+                newObject[3][0]-=1;
+                newObject[3][1]-=1;
+                newObject[2][0]+=1;
+                newObject[2][1]-=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }else if(newObject[1][0]==newObject[3][0] && newObject[1][1]==newObject[3][1]+1){
+              if(newObject[0][1]<=8){
+                newObject[0][0]+=1;
+                newObject[0][1]+=1;
+                newObject[3][0]-=1;
+                newObject[3][1]+=1;
+                newObject[2][0]-=1;
+                newObject[2][1]-=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }else if(newObject[1][0]==newObject[3][0]+1 && newObject[1][1]==newObject[3][1]){
+              if(newObject[0][0]<=18){
+                newObject[0][0]+=1;
+                newObject[0][1]-=1;
+                newObject[3][1]+=1;
+                newObject[3][0]+=1;
+                newObject[2][0]-=1;
+                newObject[2][1]+=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }else if(newObject[1][0]==newObject[3][0] && newObject[1][1]==newObject[3][1]-1){
+              if(newObject[0][1]>=1){
+                newObject[0][0]-=1;
+                newObject[0][1]-=1;
+                newObject[3][1]-=1;
+                newObject[3][0]+=1;
+                newObject[2][0]+=1;
+                newObject[2][1]+=1;
+              }else{
+                Skip=true;
+                break;
+              }
+            }       
+        break;
+        default:break;
+      }
+      //some obejct may stop moving
+      for(int i=0;i<4;i++){
+          if(gameArray[newObject[i][0]][newObject[i][1]]==1){
+            boolean IsStopByself;
+            for(int j=0;j<4;j++){
+              if(newObject[i][0]==oldObject[j][0] && newObject[i][1]==oldObject[j][1]){
+                IsStopByself=true;
+                break;
+              }else{
+                IsStopByself=false;
+              }
+            }
+            if(!IsStopByself){
+              Skip=true;
+              break;
+            }
+          }
+      }
       break;
       default:
       //down
-      lowy=0;
       //copy newObject to oldObject
       for(int i=0;i<4;i++){
         for(int j=0;j<2;j++){
@@ -178,20 +406,156 @@ void Calarray(){
         newObject[i][0]+=1;
         //if get down, Stop=true
         if(newObject[i][0]>19){Stop=true;break;}
-        if(newObject[i][0]>lowy){lowy=newObject[i][0];}
       }
       //some obejct may stop moving object
       for(int i=0;i<4;i++){
-        if(newObject[i][0]==lowy){
-          if(gameArray[lowy][newObject[i][1]]==1){
-            Stop=true;
-            break;
+          if(gameArray[newObject[i][0]][newObject[i][1]]==1){
+            boolean IsStopByself;
+            for(int j=0;j<4;j++){
+              if(newObject[i][0]==oldObject[j][0] && newObject[i][1]==oldObject[j][1]){
+                IsStopByself=true;
+                break;
+              }else{
+                IsStopByself=false;
+              }
+            }
+            if(!IsStopByself){
+              Stop=true;
+              break;
+            }
           }
-        }
       }
       break;
     }
+}
+
+void IfneedRemove(){
+  if(!needRemove){
+      int n=0;
+      for(int i=19;i>=0;i--){
+        boolean addLine;
+        for(int j=0;j<10;j++){
+          if(gameArray[i][j]!=1){
+            addLine=false;
+            break;
+          }else{
+            addLine=true;
+          }
+        }
+        if(addLine){
+          needRemove=true;
+          displayLine[n]=i;
+          n++;
+          addLine=false;
+        }
+      }
+    }
+}
+
+void RemoveLine(){
+  //copy newObject to oldObject
+      for(int i=0;i<4;i++){
+        for(int j=0;j<2;j++){
+          oldObject[i][j]=newObject[i][j];
+        }
+      }
+    //
+    if(displayState==0){
+        score+=10;
+        for(int i=0;i<20;i++){
+          if(displayLine[i]<20){
+            for(int j=0;j<10;j++){
+              gameArray[displayLine[i]][j]=0;
+            }
+          }
+        }
+        displayState++;
+    }else if(displayState==1){
+        for(int i=0;i<20;i++){
+          if(displayLine[i]<20){
+            for(int j=0;j<10;j++){
+              gameArray[displayLine[i]][j]=1;
+            }
+          }
+        }
+        displayState++;
+    }else if(displayState==2){
+        for(int i=0;i<20;i++){
+          if(displayLine[i]<20){
+            for(int j=0;j<10;j++){
+              gameArray[displayLine[i]][j]=0;
+            }
+          }
+        }
+        displayState++;
+    }else if(displayState==3){
+        for(int i=0;i<20;i++){
+          if(displayLine[i]<20){
+            for(int j=0;j<10;j++){
+              gameArray[displayLine[i]][j]=1;
+            }
+          }
+        }
+        displayState++;
+    }else if(displayState==4){
+        for(int i=0;i<20;i++){
+          if(displayLine[i]<20){
+            for(int j=0;j<10;j++){
+              gameArray[displayLine[i]][j]=0;
+            }
+          }
+        }
+        displayState++;
+    }else if(displayState==5){
+        for(int i=0;i<4;i++){
+          gameArray[newObject[i][0]][newObject[i][1]]=0;
+        }
+        for(int i=0;i<20;i++){
+          if(displayLine[i]<20){
+            for(int n=displayLine[i];n>=0;n--){
+              for(int j=0;j<10;j++){
+                gameArray[n][j]=gameArray[n-1][j];
+              }
+            }
+            for(int k=i;k<20;k++){
+              if(displayLine[k]<displayLine[i]){
+                displayLine[k]+=1;
+              }
+            }
+          }
+        }
+        for(int i=0;i<4;i++){
+          gameArray[newObject[i][0]][newObject[i][1]]=1;
+        }
+        displayState++;
+    }else{
+        displayState=0;
+        for(int i=0;i<20;i++){
+          displayLine[i]=30;
+        }
+        needRemove=false;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////
+void Calarray(){
+  //if Nextnew is true, generate a new object
+  if(Nextnew){
+     CreatNewObject();
+     IfneedRemove();
+  }else{
+    //normal situation
+    if(!needRemove){
+      ButtonResponse();
+    }else{
+       Finish=false;
+       RemoveLine();
+    }
+    displayGameFrame();
   }
+}
+
+void displayGameFrame(){
   if(Stop || Finish){
     Stop=false;
     Nextnew=true;
@@ -232,6 +596,10 @@ void setup(){
       gameArray[i][j]=0;
     }
   }
+  //intial displayLine
+  for(int i=0;i<20;i++){
+    displayLine[i]=30;
+  }
   //LCD light
   analogWrite(V0,255/3*2);
   // assign default color value
@@ -243,30 +611,8 @@ void setup(){
     u8g.setColorIndex(1);         // pixel on
 }
 
-void loop(){
-  //judge button
-  if(analogRead(leftButton)>500){
-    delay(100);
-    if(analogRead(leftButton)>500){
-      button=1;
-    }
-  }else if(analogRead(rightButton)>500){
-    delay(100);
-    if(analogRead(rightButton)>500){
-      button=2;
-    }
-  }else if(analogRead(downButton)){
-    delay(100);
-    if(analogRead(downButton)){
-      t=5;
-    }
-  }else if(analogRead(upButton)){
-    delay(100);
-    if(analogRead(upButton)){
-      button=3;
-    }
-  }else{button=0;t=500;}
-  if(!Finish){
+void DrawLCD(){
+    if(!Finish){
     /////////////////////////////////////////////////////////////////////////////
     //calculate array
     Calarray();
@@ -275,6 +621,34 @@ void loop(){
   u8g.firstPage();//clear screen
   //draw new figure
   do{draw();}while(u8g.nextPage());
+}
+
+void loop(){
+  FrameNum++;
+  //judge button
+  if(analogRead(leftButton)>500){
+    button=1;
+    DrawLCD();
+    while(analogRead(leftButton)>500){}
+    button=0;
+  }else if(analogRead(rightButton)>500){
+    button=2;
+    DrawLCD();
+    while(analogRead(rightButton)>500){}
+    button=0;
+  }else if(analogRead(downButton)>500){
+    t=5;
+  }else if(analogRead(upButton)>500){
+    button=3;
+    DrawLCD();
+    while(analogRead(upButton)>500){}
+    button=0;
+  }else{t=33;}
+  //display frame on LCD
+  if(FrameNum==15){
+    FrameNum=0;
+    DrawLCD();
+  }
   //delay t ms
   delay(t);
 }
